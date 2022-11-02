@@ -1,0 +1,41 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 10/31/2022 12:33:14 PM
+// Design Name: 
+// Module Name: Mux_Addr
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+module mux2by1(input sel, input A, input B, output res);
+assign res = sel? B : A;
+endmodule
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+module n_mux2by1 #(parameter N=8)(input sel,input [N-1:0]A, input [N-1:0]B, output [N-1:0]Out);
+genvar i ;
+generate
+for( i = 0; i<N; i=i+1) begin
+mux2by1 m1 (sel, A[i], B[i],Out[i]);
+end
+endgenerate 
+endmodule
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+module add_sub #(parameter N=32)(input Cin, input [N-1:0]A, input[N-1:0]B,output [N-1:0]Sum, output Cout);
+assign {Cout,Sum} = A + B + Cin;
+endmodule
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+module Mux_Addr(
+
+    );
+endmodule
