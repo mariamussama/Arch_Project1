@@ -1,23 +1,3 @@
-`timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 10/31/2022 12:32:48 PM
-// Design Name: 
-// Module Name: Reg_RF_Mem
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
 module DFlipFlop(input clk, input rst, input D, output reg Q);
  always @ (posedge clk or posedge rst)
  if (rst) begin
@@ -40,7 +20,7 @@ endgenerate
 
 endmodule
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-module Reg_file #(parameter N=32)(input[N-1:0]D, input [4:0]ReadReg1, [4:0]ReadReg2,input [4:0]WriteReg, input clk, rst, RegWrite, output [N-1:0] Read_data1, [N-1:0]Read_data2 );
+module Reg_file#(parameter N=32) (input[N-1:0]D, input [4:0]ReadReg1, input [4:0]ReadReg2, input [4:0]WriteReg, input clk,input rst, input RegWrite, output [N-1:0] Read_data1, output [N-1:0]Read_data2 );
 wire [N-1:0]Q[31:0];
 reg [31:0]load;
 always @(*)begin
@@ -90,16 +70,22 @@ for(i = 0; i<64; i=i+1) begin
  
 endmodule
 ////////////////////////////////////////////////////////////////////////////////////////
-module DataMem (input clk, input MemRead, input MemWrite, input [5:0] addr, input [31:0] data_in, output reg [31:0] data_out);
- reg [31:0] mem [0:63];
+module DataMem (input clk, input MemRead, input MemWrite, input [5:0] addr, input [31:0] data_in, input [2:0]func3, output reg [31:0] data_out);
+ reg [7:0] mem [0:63];
  integer i;
  always @(posedge clk) begin
- if(MemWrite)
- mem[addr]<=data_in;
+ if(MemWrite)///working
+ if (func3==3'b000) mem[addr]<=data_in;
+ if (func3==3'b001) {mem[addr], mem[addr+1]}<=data_in;
+ if (func3==3'b010) {mem[addr], mem[addr+1],mem[addr+2],mem[addr+3] }<=data_in;
+
  end
  always@(*) begin
-  if (MemRead)
- data_out<= mem[addr];
+  if (MemRead)///working
+ //data_out<= mem[addr];
+  if (func3==3'b000) data_out<=mem[addr];
+  if (func3==3'b001) data_out<={mem[addr], mem[addr+1]};
+  if (func3==3'b010) data_out<={mem[addr], mem[addr+1],mem[addr+2],mem[addr+3] };
  end
  /*initial begin
 for(i = 0; i<64; i=i+1) begin
@@ -107,9 +93,9 @@ for(i = 0; i<64; i=i+1) begin
  end
  end*/
  initial begin
- mem[0]=32'd17;
- mem[1]=32'd9; 
- mem[2]=32'd25; 
+ mem[0]=7'd17;
+ mem[1]=7'd9; 
+ mem[2]=7'd25; 
 
  end
 endmodule

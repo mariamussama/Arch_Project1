@@ -1,24 +1,46 @@
-`timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 10/31/2022 12:50:11 PM
-// Design Name: 
-// Module Name: ALU_Control
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
-module Control_unit(input [6:0]opcode, output reg Branch, MemRead, MemtoReg, output reg [1:0] ALUOp, output reg MemWrite, ALUSrc, RegWrite);
+`include "defines.v"
+module mirror (input [31:0] in, output reg [31:0] out);
+    integer i;
+    always @ *
+        for(i=0; i<32; i=i+1)
+            out[i] = in[31-i];
+endmodule
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// Shift Right Unit
+module shr(input [31:0] a, output [31:0] r, input [4:0] shamt, input ar);
+
+    wire [31:0] r1, r2, r3, r4;
+
+    wire fill = ar ? a[31] : 1'b0;
+    assign r1 = shamt[0] ? {{1{fill}}, a[31:1]} : a;
+    assign r2 = shamt[1] ? {{2{fill}}, r1[31:2]} : r1;
+    assign r3 = shamt[2] ? {{4{fill}}, r2[31:4]} : r2;
+    assign r4 = shamt[3] ? {{8{fill}}, r3[31:8]} : r3;
+    assign r = shamt[4] ? {{16{fill}}, r4[31:16]} : r4;
+
+endmodule
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// The Shifter
+module shift(
+	input wire [31:0] a,
+	input wire [4:0] shamt,
+	input wire [1:0] typ,	// type[0] sll or srl - type[1] sra
+							// 00 : srl, 10 : sra, 01 : sll
+	output wire [31:0] r
+	);
+    wire [31 : 0] ma, my, y, x, sy;
+
+    mirror m1(.in(a), .out(ma));
+    mirror m2(.in(y), .out(my));
+
+    assign x = typ[0] ? ma : a;
+    shr sh0(.a(x), .r(y), .shamt(shamt), .ar(typ[1]));
+
+    assign r = typ[0] ? my : y;
+
+endmodule
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+module Control_unit(input [6:0]opcode, output reg Branch, MemRead, MemtoReg, output reg [1:0] ALUOp, Rd_sel, output reg MemWrite, ALUSrc, RegWrite, pc_sel);
 always @(*) begin
 case(opcode[6:2]) 
 5'b01100: begin Branch = 0; 
@@ -28,6 +50,8 @@ case(opcode[6:2])
             MemWrite = 0; 
             ALUSrc = 0;
             RegWrite = 1;
+            Rd_sel=2'b10;
+            pc_sel = 1'b0;
             end
 5'b00000: begin Branch = 0; 
             MemRead = 1; 
@@ -36,6 +60,8 @@ case(opcode[6:2])
             MemWrite = 0; 
             ALUSrc = 1;
             RegWrite = 1;
+            Rd_sel=2'b10;
+            pc_sel = 1'b0;
             end
 5'b01000: begin Branch = 0; 
             MemRead = 0; 
@@ -44,6 +70,8 @@ case(opcode[6:2])
             MemWrite = 1; 
             ALUSrc = 1;
             RegWrite = 0;
+            Rd_sel=2'b10;
+            pc_sel = 1'b0;
             end
 5'b11000: begin Branch = 1; 
             MemRead = 0; 
@@ -52,6 +80,48 @@ case(opcode[6:2])
             MemWrite = 0; 
             ALUSrc = 0;
             RegWrite = 0;
+            Rd_sel=2'b10;
+            pc_sel = 1'b0;
+            end
+5'b00100: begin Branch = 0; 
+            MemRead = 0; 
+            MemtoReg = 0;
+            ALUOp = 2'b10;
+            MemWrite = 0; 
+            ALUSrc = 1;
+            RegWrite = 1;
+            Rd_sel=2'b10;
+            pc_sel = 1'b0;
+            end
+5'b11011: begin Branch = 1; //JAL
+            MemRead = 0; 
+            MemtoReg = 0;
+            ALUOp = 2'b10;
+            MemWrite = 0; 
+            ALUSrc = 1;
+            RegWrite = 1;
+            Rd_sel=2'b01;
+            pc_sel = 1'b0;
+            end
+5'b11001: begin Branch = 1; //JALR
+            MemRead = 0; 
+            MemtoReg = 0;
+            ALUOp = 2'b10;
+            MemWrite = 0; 
+            ALUSrc = 1;
+            RegWrite = 1;
+            Rd_sel=2'b01;
+            pc_sel=1'b1;
+            end
+5'b00101: begin Branch = 0; //AUIPC
+            MemRead = 0; 
+            MemtoReg = 0;
+            ALUOp = 2'b10;
+            MemWrite = 0; 
+            ALUSrc = 1;
+            RegWrite = 1;
+            Rd_sel=2'b00;
+            pc_sel = 1'b0;
             end
 default:begin Branch = 0; 
             MemRead = 0; 
@@ -60,13 +130,15 @@ default:begin Branch = 0;
             MemWrite = 0; 
             ALUSrc = 0;
             RegWrite = 0;
+            Rd_sel=2'b11;
+            pc_sel=1'b0;
             end
 endcase
 end
 
 endmodule
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-module ALU_CU(input [1:0] ALUOp, input [3:0] Inst, output [3:0] ALU_Sel);
+module ALU_CU(input [1:0] ALUOp, input [3:0] Inst, output reg [3:0] ALU_Sel);
 /*assign ALU_Sel = (ALUOp == 2'b00)? 4'b0010://add
                  (ALUOp == 2'b01)? 4'b0110://sub
                  (ALUOp == 2'b10 && Inst[14:12] == 3'b000 && Inst[30])? 4'b0110://sub
@@ -99,48 +171,15 @@ always @ * begin
         ALU_Sel = 4'b1101;//slt
         else if (Inst[2:0] == 3'b011 && ~Inst[30])
         ALU_Sel = 4'b1111;//sltu   
-    end///////currently working 
+    end
     	default:	ALU_Sel = 4'b0000;
   endcase
 end
 endmodule
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*module ALU #(parameter N=32)(input [3:0]sel,input [N-1:0]A, input[N-1:0]B, output reg [N-1:0] ALUout, output zeroflag );
-wire [N-1:0]Sum;
-wire Cout;
-wire [N-1:0]Bin;
-wire [N-1:0]AND_out;
-wire [N-1:0] OR_out;
-assign Bin = sel[2]? ~B: B;
-add_sub#(N) u1 (sel[2], A, Bin, Sum, Cout);
-assign AND_out = A & B;
-assign OR_out = A|B;
-always @ * begin
-  case (sel)
-            // arithmetic
-    4'b00_00 : ALUout = Sum;
-    4'b00_01 : ALUout = Sum;
-    4'b00_11 : ALUout = B;
-            // logic
-    4'b01_00:  ALUout = A | B;
-    4'b01_01:  ALUout = A & B;
-    4'b01_11:  ALUout = A ^ B;
-            // shift
-    4'b10_00:  ALUout=sh;
-    4'b10_01:  ALUout=sh;
-    4'b10_10:  ALUout=sh;
-            // slt & sltu
-    4'b11_01:  ALUout = {31'b0,(sf != vf)};
-    4'b11_11:  ALUout = {31'b0,(~cf)};
-
-	default:	ALUout = Sum;
-  endcase
-end
-assign zeroflag = ALUout? 0: 1;
-endmodule*/
 module prv32_ALU(
 	input   wire [31:0] a, b,
-	input   wire [4:0]  shamt,
+	input   wire [4:0]  shamt,//Inst[24:20]
 	output  reg  [31:0] r,
 	output  wire        cf, zf, vf, sf,
 	input   wire [3:0]  alufn
@@ -158,7 +197,7 @@ module prv32_ALU(
     assign vf = (a[31] ^ (op_b[31]) ^ add[31] ^ cf);
     
     wire[31:0] sh;
-    shifter shifter0(.a(a), .shamt(shamt), .type(alufn[1:0]),  .r(sh));
+    shift shifter0(.a(a), .shamt(shamt), .typ(alufn[1:0]),  .r(sh));
     
     always @ * begin
         r = 0;
@@ -183,7 +222,20 @@ module prv32_ALU(
     end
 endmodule
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+module Branch_sign(input [2:0]funct3, input zf, input sf, input vf, input cf, output reg BR);
+always @ * begin
+  case (funct3)
+    `BR_BEQ : BR = zf;
+    `BR_BNE : BR = ~zf;
+    `BR_BLT : BR = (sf != vf) ;
+    `BR_BGE : BR = (sf == vf);
+    `BR_BLTU : BR = ~cf;
+    `BR_BGEU : BR = cf;
+    default:	BR = 0;
+  endcase
+end
+endmodule 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 module ALU_Control(
 
     );
