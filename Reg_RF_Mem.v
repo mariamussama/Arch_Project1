@@ -82,18 +82,41 @@ for(i = 0; i<64; i=i+1) begin
  mem[25]=32'h0092d503;
  mem[26]=32'h00110523;
  mem[27]=32'h00a10183;
- mem[28]=32'h00410093;
+ mem[28]=32'h00410093;///addi
+ mem[29]=32'h00412093;/////////slti
+ mem[30]=32'h00413093;
+ mem[31]=32'h003170b3;//and x1 x2 x3      //32'h0110000f;/////////fence
+ mem[32]=32'h00458503;
+ mem[33]=32'h003100b3;
+ mem[34]=32'h403100b3;
+ mem[35]=32'h003110b3;
+ mem[36]=32'h003120b3;
+ mem[37]=32'h00712523;
+ mem[38]=32'h00414093;
+ mem[39]=32'h00416093;
+ mem[40]=32'h00f14103;// lbu x2,15(x2) //32'h00000073;///////////ecall
+ mem[41]=32'h00417093;
+ mem[42]=32'h002c9293;
+ mem[43]=32'h002cd293;
+ mem[44]=32'h4022dc93;
+ mem[45]=32'h003130b3;
+ mem[46]=32'h003140b3;
+ mem[47]=32'h00f05303;//lhu x6, 15(x0)  //32'h00100073;//////////ebreak
+ mem[48]=32'h003150b3;
+ mem[49]=32'h403150b3;
+ mem[50]=32'h003160b3;
+ mem[51]=32'h01100383;//lb x7,17(x0)
 
  end 
  
  
 endmodule
 ////////////////////////////////////////////////////////////////////////////////////////
-module DataMem (input clk, input MemRead, input MemWrite, input [7:0] address, input [31:0] data_in, input [2:0]func3, output reg [31:0] data_out);
+module DataMem (input clk, input MemRead, input MemWrite, input [7:0] addr, input [31:0] data_in, input [2:0]func3, output reg [31:0] data_out);
  reg [7:0] mem [0:255];
- wire [5:0]addr;
+ //wire [5:0]addr;
  //integer i;
- assign addr= {address[3:0],2'b00};
+ //assign addr= {address[3:0],2'b00};
  always @(posedge clk) begin
  if(MemWrite)begin///working
  if (func3==3'b000) mem[addr]<=data_in[7:0];
@@ -104,10 +127,11 @@ module DataMem (input clk, input MemRead, input MemWrite, input [7:0] address, i
  end
  always@ (*) begin
   if (MemRead)begin
-  if (func3==3'b000) data_out<={{24{1'b0}},mem[addr]};
-  if (func3==3'b001) data_out<={{16{1'b0}},mem[addr+1], mem[addr]};
-  if (func3==3'b010) data_out<={mem[addr+3], mem[addr+2],mem[addr+1],mem[addr] };
-   ///////////////2 more IFs ~working
+  if (func3==3'b000) data_out<={{24{mem[addr][7]}},mem[addr]};//lb
+  if (func3==3'b001) data_out<={{16{mem[addr+1][7]}},mem[addr+1], mem[addr]};//lh
+  if (func3==3'b010) data_out<={mem[addr+3], mem[addr+2],mem[addr+1],mem[addr] };//lw
+  if (func3==3'b100) data_out<={{24{1'b0}},mem[addr]};//lbu
+  if (func3==3'b101) data_out<={{16{1'b0}},mem[addr+1], mem[addr]};//lhu
   end
  end
  /*initial begin
@@ -128,7 +152,12 @@ module DataMem (input clk, input MemRead, input MemWrite, input [7:0] address, i
  mem[9]=8'd0;
  mem[10]=8'd0;
  mem[11]=8'd0;
- mem[12]=8'd25;  
+ mem[12]=8'd25;
+ mem[13]=8'd0;  
+ mem[14]=8'd0;  
+ mem[15]=8'b00000001;  
+ mem[16]=8'b01100000; //24577 for 15-16
+ mem[17]=8'b10101010;//170, -86
  end
 endmodule
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
