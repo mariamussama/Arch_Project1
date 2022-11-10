@@ -1,4 +1,4 @@
-`include "Reg.v"
+`include "nReg.v"
 module Reg_file#(parameter N=32) (
     input[N-1:0]D, 
     input [4:0]ReadReg1, 
@@ -22,7 +22,7 @@ end
 genvar i;
 generate
 for( i = 0; i<32; i=i+1) begin
-Reg #(N) r( D,clk,load[i], rst, Q[i]);
+nReg #(N) r( D,clk,load[i], rst, Q[i]);
 end
 endgenerate
 
