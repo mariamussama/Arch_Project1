@@ -70,19 +70,19 @@ Reg_file #(32) RF(.D(Write_data), .ReadReg1(ReadReg1), .ReadReg2(ReadReg2),
 .WriteReg(WriteReg), .clk(clk), .rst(rst), .RegWrite(RegWrite), .Read_data1(Read_data1),.Read_data2(Read_data2) );
 rv32_ImmGen imm_gen(.IR(IF_ID_Inst), .Imm(gen_out));
 Reg #(193) ID_EX ({CU_signals,IF_ID_PC,Read_data1,Read_data2,gen_out,{IF_ID_Inst[30],IF_ID_Inst[14:12]},
-ReadReg1,ReadReg2, IF_ID_Inst[11:7], IF_ID_sumPC},clk,1'b1,rst,{ID_EX_Ctrl,ID_EX_PC,
+ReadReg1,ReadReg2, WriteReg, IF_ID_sumPC},clk,1'b1,rst,{ID_EX_Ctrl,ID_EX_PC,
 ID_EX_RegR1,ID_EX_RegR2,ID_EX_Imm, ID_EX_Func,ID_EX_Rs1,ID_EX_Rs2,ID_EX_Rd, ID_EX_sumPC} );
 //////////////////EX/Mem//////////////////////
 n_mux2by1 #(32)mux_fromRF( .sel(ID_EX_Ctrl[1]), .A(ID_EX_RegR2), .B(ID_EX_Imm), .Out(mux_to_ALU));
 ALU_CU ALUControl(.ALUOp(ID_EX_Ctrl[4:3]), .Inst(ID_EX_Func), .ALU_Sel(ALU_Sel));
-prv32_ALU alu( .a(Read_data1), .b(mux_to_ALU), .shamt(Inst[24:20]), .r(ALUout) , 
+prv32_ALU alu( .a(ID_EX_RegR1), .b(mux_to_ALU), .shamt(ID_EX_Rs2), .r(ALUout) , 
 .cf(cf), .zf(zeroflag), .vf(vf), .sf(sf), .alufn(ALU_Sel) );
 Branch_sign br(.funct3(ID_EX_Func[2:0]), .zf(zeroflag), .sf(sf), .vf(vf), .cf(cf), .BR(BR));
 add_sub #(32) ADD_to_mux_PC(.Cin(1'b0), .A(pc_OUT), .B(gen_out) , .Sum(sum_shift), .Cout(Cout));
 Reg #(185) EX_MEM ({ID_EX_Ctrl,sum_shift,zeroflag,ALUout,ID_EX_RegR2,ID_EX_Rd,ID_EX_sumPC, BR, ID_EX_Func,sum_shift},clk,1'b1,rst,
  {EX_MEM_Ctrl, EX_MEM_BranchAddOut, EX_MEM_Zero,EX_MEM_ALU_out, EX_MEM_RegR2, EX_MEM_Rd,EX_MEM_sumPC, EX_MEM_BR, EX_MEM_Func, EX_MEM_sumShift} );
 ///////////////////Mem/WB//////////////////////
-assign and_pc = Branch & (EX_MEM_BR|EX_MEM_Ctrl[10]);
+assign and_pc = EX_MEM_Ctrl[7] & (EX_MEM_BR|EX_MEM_Ctrl[10]);
 DataMem datamem( .clk(clk), .MemRead(EX_MEM_Ctrl[6]), .MemWrite(EX_MEM_Ctrl[2]), 
 .addr(EX_MEM_ALU_out[7:0]), .data_in(EX_MEM_RegR2), .func3(EX_MEM_Func[2:0]), .data_out(mem_data_out));
 Reg #(147) MEM_WB ({EX_MEM_Ctrl,mem_data_out,EX_MEM_ALU_out,EX_MEM_Rd, EX_MEM_sumPC, EX_MEM_sumShift},clk,1'b1,rst,
