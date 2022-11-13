@@ -12,12 +12,13 @@
 `include "shift.v"
 `include "Branch_sign.v"
 `include "prv32_ALU.v"
+`include "Mem.v"
 //////////////////////////////////////////////////////////////////////////////////
 
 module Milestone1 ( 
     input clk, 
     input rst,
-    output wire [31:0]Inst
+    output reg [31:0]Inst
     );
 wire and_pc, zeroflag, Cout;
 wire cout_add_pc;
@@ -28,9 +29,11 @@ wire [4:0]ReadReg1,ReadReg2, WriteReg;
 wire [3:0] ALU_Sel;
 wire cf, vf, sf, BR, pc_sel,JAL,EC_FE,EB;
 wire [31:0]Write_data, muxPC_out;
-wire [31:0]pc_OUT, sum_pc, sum_shift, pc, Read_data1, Read_data2, Write_data_Rd, gen_out, mux_to_ALU, ALUout, mem_data_out;
+wire [31:0]pc_OUT, sum_pc, sum_shift, pc, Read_data1, Read_data2, Write_data_Rd, gen_out, mux_to_ALU, ALUout, mem_out;//, mem_data_out;//, mem_out;
+reg [31:0] mem_data_out;
 wire rst_pc=1'b1;
 wire [13:0] CU_signals;
+wire [7:0] mux_mem_addr;
 
 wire [31:0] IF_ID_PC, IF_ID_Inst, IF_ID_sumPC;
 
@@ -58,8 +61,16 @@ Reg #(32) reg_pc(.D(pc), .clk(clk), .load(EB), .rst(rst), .Q(pc_OUT));
 n_mux2by1 #(32)mux_ECFE_pc(.sel(EC_FE),.A(pc_OUT),.B(32'b11111111111111111111111111111100),.Out(muxPC_out));
 add_sub #(32) addr(.Cin(1'b0), .A(muxPC_out), .B(32'd4), .Sum(sum_pc), .Cout(cout_add_pc));
 n_mux4by1 #(32)mux_pc(.sel({EX_MEM_Ctrl[11],and_pc}), .A(sum_pc), .B(EX_MEM_BranchAddOut), .C(EX_MEM_ALU_out), .D(EX_MEM_ALU_out), .Out(pc));
-InstMem insmem(.addr(pc_OUT[7:2]), .data_out(Inst));
+n_mux2by1 #(8)mux_Inst_data(.sel(clk),.A(EX_MEM_ALU_out[7:0]),.B(pc_OUT[7:0]),.Out(mux_mem_addr)); //address to the memory
+//InstMem insmem(.addr(pc_OUT[7:0]), .data_out(Inst));
+Mem mem(.clk(clk), .MemRead(EX_MEM_Ctrl[6]), .MemWrite(EX_MEM_Ctrl[2]), .addr(mux_mem_addr), .data_in(EX_MEM_RegR2), .func3(EX_MEM_Func[2:0]), .data_out(mem_out));
 Reg #(96) IF_ID ({pc_OUT,Inst,sum_pc},clk,1'b1,rst, {IF_ID_PC,IF_ID_Inst,IF_ID_sumPC} );
+always @(posedge clk) begin
+Inst <= mem_out;
+end 
+always @(negedge clk) begin
+mem_data_out <= mem_out;
+end 
 //////////////////ID/EX//////////////////////
 Control_unit CU( .opcode(IF_ID_Inst[6:0]), .EC_EB(IF_ID_Inst[20]), .Branch(Branch), .MemRead(MemRead), 
 .MemtoReg(MemtoReg), .ALUOp(ALUOp), .Rd_sel(Rd_sel), .MemWrite(MemWrite), .ALUSrc(ALUSrc), 
@@ -83,8 +94,8 @@ Reg #(153) EX_MEM ({ID_EX_Ctrl,sum_shift,zeroflag,ALUout,ID_EX_RegR2,ID_EX_Rd,ID
  {EX_MEM_Ctrl, EX_MEM_BranchAddOut, EX_MEM_Zero,EX_MEM_ALU_out, EX_MEM_RegR2, EX_MEM_Rd,EX_MEM_sumPC, EX_MEM_BR, EX_MEM_Func} );//
 ///////////////////Mem/WB//////////////////////
 assign and_pc = EX_MEM_Ctrl[7] & (EX_MEM_BR|EX_MEM_Ctrl[10]);
-DataMem datamem( .clk(clk), .MemRead(EX_MEM_Ctrl[6]), .MemWrite(EX_MEM_Ctrl[2]), 
-.addr(EX_MEM_ALU_out[7:0]), .data_in(EX_MEM_RegR2), .func3(EX_MEM_Func[2:0]), .data_out(mem_data_out));
+/*DataMem datamem( .clk(clk), .MemRead(EX_MEM_Ctrl[6]), .MemWrite(EX_MEM_Ctrl[2]), 
+.addr(EX_MEM_ALU_out[7:0]), .data_in(EX_MEM_RegR2), .func3(EX_MEM_Func[2:0]), .data_out(mem_data_out));*/
 Reg #(147) MEM_WB ({EX_MEM_Ctrl,mem_data_out,EX_MEM_ALU_out,EX_MEM_Rd, EX_MEM_sumPC, EX_MEM_BranchAddOut},clk,1'b1,rst,
  {MEM_WB_Ctrl,MEM_WB_Mem_out, MEM_WB_ALU_out,
 MEM_WB_Rd, MEM_WB_sumPC,MEM_WB_BranchAddOut} ); //
