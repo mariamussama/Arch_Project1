@@ -3,8 +3,6 @@
 `include "n_mux2by1.v"
 `include "n_mux4by1.v"
 `include "add_sub.v"
-`include "InstMem.v"
-`include "DataMem.v"
 `include "Reg_file.v"
 `include "Reg.v"
 `include "Control_unit.v"
@@ -15,7 +13,7 @@
 `include "Mem.v"
 //////////////////////////////////////////////////////////////////////////////////
 
-module Milestone1 ( 
+module Milestone3 ( 
     input clk, 
     input rst,
     output reg [31:0]Inst

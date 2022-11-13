@@ -1,13 +1,13 @@
-`include "Milestone1.v" 
+`include "Milestone3.v" 
 //////////////////////////////////////////////////////////////////////////////////
-module Milestone1_tb();
+module Milestone3_tb();
 reg clk, rst;
 wire [31:0]Inst;
-Milestone1 uut( clk, rst, Inst);
+Milestone3 uut( clk, rst, Inst);
 always #10 clk=~clk;
 initial begin
-$dumpfile("Milestone1.vcd");
-$dumpvars(0, Milestone1_tb);
+$dumpfile("Milestone3.vcd");
+$dumpvars(0, Milestone3_tb);
 clk =0;rst=1;
 #25;
 rst=0;
