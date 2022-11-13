@@ -6,29 +6,31 @@ module Mem (
     input [31:0] data_in, 
     input [2:0]func3, 
     output reg [31:0] data_out
+
     );
  reg [7:0] mem [0:255];
  //assign data_out = {mem[addr+3], mem[addr+2],mem[addr+1],mem[addr] };
 
-  always @(posedge clk) begin
- data_out <= {mem[addr+3], mem[addr+2],mem[addr+1],mem[addr] };
- end
-
- always@ (negedge clk) begin
+ always @(*) begin
+  if (clk)
+    data_out <= {mem[addr+3], mem[addr+2],mem[addr+1],mem[addr] };
+ else  begin
   if (MemRead)begin
-  if (func3==3'b000) data_out<={{24{mem[addr][7]}},mem[addr]};//lb
-  if (func3==3'b001) data_out<={{16{mem[addr+1][7]}},mem[addr+1], mem[addr]};//lh
-  if (func3==3'b010) data_out<={mem[addr+3], mem[addr+2],mem[addr+1],mem[addr] };//lw
-  if (func3==3'b100) data_out<={{24{1'b0}},mem[addr]};//lbu
-  if (func3==3'b101) data_out<={{16{1'b0}},mem[addr+1], mem[addr]};//lhu
+    if (func3==3'b000) data_out<={{24{mem[addr][7]}},mem[addr]};//lb
+    if (func3==3'b001) data_out<={{16{mem[addr+1][7]}},mem[addr+1], mem[addr]};//lh
+    if (func3==3'b010) data_out<={mem[addr+3], mem[addr+2],mem[addr+1],mem[addr] };//lw
+    if (func3==3'b100) data_out<={{24{1'b0}},mem[addr]};//lbu
+    if (func3==3'b101) data_out<={{16{1'b0}},mem[addr+1], mem[addr]};//lhu
   end
-   if(MemWrite)begin
- if (func3==3'b000) mem[addr]<=data_in[7:0];
- if (func3==3'b001) {mem[addr+1], mem[addr]}<=data_in[15:0];
- if (func3==3'b010) {mem[addr+3], mem[addr+2],mem[addr+1],mem[addr] }<=data_in;
+  if(MemWrite)begin
+    if (func3==3'b000) mem[addr]<=data_in[7:0];
+    if (func3==3'b001) {mem[addr+1], mem[addr]}<=data_in[15:0];
+    if (func3==3'b010) {mem[addr+3], mem[addr+2],mem[addr+1],mem[addr] }<=data_in;
+  end
  end
  end
- initial begin/*
+ initial begin
+ /*
 mem[0]=32'h00002283;// lw x5, 0(x0)
 mem[1]=32'h00402b03;// lw x22, 4(x0)
 mem[2]=32'h00802b83;// lw x23, 8(x0)

@@ -65,10 +65,10 @@ n_mux2by1 #(8)mux_Inst_data(.sel(clk),.A(EX_MEM_ALU_out[7:0]),.B(pc_OUT[7:0]),.O
 //InstMem insmem(.addr(pc_OUT[7:0]), .data_out(Inst));
 Mem mem(.clk(clk), .MemRead(EX_MEM_Ctrl[6]), .MemWrite(EX_MEM_Ctrl[2]), .addr(mux_mem_addr), .data_in(EX_MEM_RegR2), .func3(EX_MEM_Func[2:0]), .data_out(mem_out));
 Reg #(96) IF_ID ({pc_OUT,Inst,sum_pc},clk,1'b1,rst, {IF_ID_PC,IF_ID_Inst,IF_ID_sumPC} );
-always @(posedge clk) begin
+always @(mem_out) begin
+if (clk)
 Inst <= mem_out;
-end 
-always @(negedge clk) begin
+else
 mem_data_out <= mem_out;
 end 
 //////////////////ID/EX//////////////////////
